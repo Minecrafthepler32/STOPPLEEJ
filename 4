@@ -1,9 +1,12 @@
--- NONE Platform (Remove)
+local Workspace = game:GetService("Workspace")
 
-local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
+local folder = Workspace:FindFirstChild("InfiniteBaseplates")
+if folder then
+    folder:Destroy()
+end
 
-local PltInstance = workspace:FindFirstChild("PlatformFolder_" .. Player.UserId)
-if PltInstance then
-	PltInstance:Destroy()
+for _, item in ipairs(Workspace:GetChildren()) do
+    if item:IsA("Part") and item.Name == "GrassBaseplate" then
+        item:Destroy()
+    end
 end
