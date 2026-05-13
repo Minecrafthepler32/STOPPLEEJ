@@ -1,0 +1,72 @@
+-- Basalt
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+
+local existing = Workspace:FindFirstChild("InfiniteBaseplates")
+if existing then existing:Destroy() end
+local baseplateFolder = Instance.new("Folder")
+baseplateFolder.Name = "InfiniteBaseplates"
+baseplateFolder.Parent = Workspace
+
+local baseplateSize      = 2000
+local baseplateSpacing   = 0
+local baseplateThickness = 4
+local baseplateGrid      = {}
+local selectedColor      = Color3.fromRGB(0, 0, 0) -- Black
+
+local function getBaseplateYPosition(playerPosition)
+    local character = Player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local humanoidRootPart = character.HumanoidRootPart
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        raycastParams.FilterDescendantsInstances = {character, baseplateFolder}
+        local raycastResult = Workspace:Raycast(humanoidRootPart.Position, Vector3.new(0, -1000, 0), raycastParams)
+        if raycastResult then
+            return raycastResult.Position.Y - (baseplateThickness / 2) - 0.05
+        else
+            return playerPosition.Y - 20
+        end
+    end
+    return 0
+end
+
+local function addBaseplate(position)
+    local key = tostring(position.X) .. "," .. tostring(position.Z)
+    if baseplateGrid[key] then return end
+    local part = Instance.new("Part")
+    part.Name         = "GrassBaseplate"
+    part.Size         = Vector3.new(baseplateSize, baseplateThickness, baseplateSize)
+    part.Anchored     = true
+    part.Material     = Enum.Material.Basalt
+    part.Color        = selectedColor
+    part.Position     = position
+    part.Transparency = 0
+    part.CanCollide   = true
+    part.Parent       = baseplateFolder
+    baseplateGrid[key] = part
+end
+
+local function createBaseplatesAroundPlayer()
+    local character = Player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local playerPosition = character.HumanoidRootPart.Position
+    local sizeMultiplier = baseplateSize + baseplateSpacing
+    local baseplateY     = getBaseplateYPosition(playerPosition)
+    for x = -1, 1 do
+        for z = -1, 1 do
+            local gridX = math.floor(playerPosition.X / sizeMultiplier) * sizeMultiplier + (x * sizeMultiplier)
+            local gridZ = math.floor(playerPosition.Z / sizeMultiplier) * sizeMultiplier + (z * sizeMultiplier)
+            addBaseplate(Vector3.new(gridX, baseplateY, gridZ))
+        end
+    end
+end
+
+createBaseplatesAroundPlayer()
+
+spawn(function()
+    while wait(1) do
+        createBaseplatesAroundPlayer()
+    end
+end)
