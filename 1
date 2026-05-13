@@ -1,46 +1,72 @@
--- OPAQUE Platform (Empty Tools - Fixed)
-
+-- Blue Baseplate (Royal Blue)
+local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 
--- Remove existing platform
-local PltInstance = workspace:FindFirstChild("PlatformFolder_" .. Player.UserId)
-if PltInstance then
-	PltInstance:Destroy()
+local existing = Workspace:FindFirstChild("InfiniteBaseplates")
+if existing then existing:Destroy() end
+local baseplateFolder = Instance.new("Folder")
+baseplateFolder.Name = "InfiniteBaseplates"
+baseplateFolder.Parent = Workspace
+
+local baseplateSize      = 2000
+local baseplateSpacing   = 0
+local baseplateThickness = 4
+local baseplateGrid      = {}
+local selectedColor      = Color3.fromRGB(170, 85, 55) -- Brick
+
+local function getBaseplateYPosition(playerPosition)
+    local character = Player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local humanoidRootPart = character.HumanoidRootPart
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        raycastParams.FilterDescendantsInstances = {character, baseplateFolder}
+        local raycastResult = Workspace:Raycast(humanoidRootPart.Position, Vector3.new(0, -1000, 0), raycastParams)
+        if raycastResult then
+            return raycastResult.Position.Y - (baseplateThickness / 2) - 0.05
+        else
+            return playerPosition.Y - 20
+        end
+    end
+    return 0
 end
 
-local character = Player.Character or Player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
-
--- Calculate Y position (same as Empty Tools)
-local center, size = character:GetBoundingBox()
-local offset = hrp.Position.Y - (center.Y - size.Y / 2)
-local extra = 0.1
-local yPos = hrp.Position.Y - offset - (3 / 2) - extra
-
--- Create folder
-local folder = Instance.new("Folder")
-folder.Name = "PlatformFolder_" .. Player.UserId
-folder.Parent = workspace
-
--- Create 3x3 giant opaque platform
-for dx = -1, 1 do
-	for dz = -1, 1 do
-		local p = Instance.new("Part")
-		p.Size = Vector3.new(2048, 3, 2048)
-		p.Anchored = true
-		p.CanCollide = true
-		p.CastShadow = false
-		p.Transparency = 0
-		p.Material = Enum.Material.Concrete
-		p.Color = Color3.fromRGB(100, 100, 100)
-
-		p.Position = Vector3.new(
-			hrp.Position.X + dx * 2048,
-			yPos,
-			hrp.Position.Z + dz * 2048
-		)
-
-		p.Parent = folder
-	end
+local function addBaseplate(position)
+    local key = tostring(position.X) .. "," .. tostring(position.Z)
+    if baseplateGrid[key] then return end
+    local part = Instance.new("Part")
+    part.Name         = "GrassBaseplate"
+    part.Size         = Vector3.new(baseplateSize, baseplateThickness, baseplateSize)
+    part.Anchored     = true
+    part.Material     = Enum.Material.Brick
+    part.Color        = selectedColor
+    part.Position     = position
+    part.Transparency = 0
+    part.CanCollide   = true
+    part.Parent       = baseplateFolder
+    baseplateGrid[key] = part
 end
+
+local function createBaseplatesAroundPlayer()
+    local character = Player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local playerPosition = character.HumanoidRootPart.Position
+    local sizeMultiplier = baseplateSize + baseplateSpacing
+    local baseplateY     = getBaseplateYPosition(playerPosition)
+    for x = -1, 1 do
+        for z = -1, 1 do
+            local gridX = math.floor(playerPosition.X / sizeMultiplier) * sizeMultiplier + (x * sizeMultiplier)
+            local gridZ = math.floor(playerPosition.Z / sizeMultiplier) * sizeMultiplier + (z * sizeMultiplier)
+            addBaseplate(Vector3.new(gridX, baseplateY, gridZ))
+        end
+    end
+end
+
+createBaseplatesAroundPlayer()
+
+spawn(function()
+    while wait(1) do
+        createBaseplatesAroundPlayer()
+    end
+end)
