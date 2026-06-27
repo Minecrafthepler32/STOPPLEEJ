@@ -3,10 +3,7 @@ local Workspace = game:GetService("Workspace")
 local folder = Workspace:FindFirstChild("InfiniteBaseplates")
 if folder then
     folder:Destroy()
-end
-
-for _, item in ipairs(Workspace:GetChildren()) do
-    if item:IsA("Part") and item.Name == "GrassBaseplate" then
-        item:Destroy()
-    end
+    print("Baseplates reset.")
+else
+    print("No baseplates found.")
 end
