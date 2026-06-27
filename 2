@@ -1,73 +1,100 @@
--- TRANSPARENT Platform (Empty Tools - Fixed)
-
-local Workspace = game:GetService("Workspace")
-local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
+-- Transparent Infinite Baseplate
+local Workspace  = game:GetService("Workspace")
+local Players    = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Player     = Players.LocalPlayer
 
 local existing = Workspace:FindFirstChild("InfiniteBaseplates")
 if existing then existing:Destroy() end
+
 local baseplateFolder = Instance.new("Folder")
 baseplateFolder.Name = "InfiniteBaseplates"
 baseplateFolder.Parent = Workspace
 
-local baseplateSize      = 2000
-local baseplateSpacing   = 0
-local baseplateThickness = 4
-local baseplateGrid      = {}
-local selectedColor      = Color3.fromRGB(194, 178, 128) -- Sand
+local BASEPLATE_SIZE      = 2000
+local BASEPLATE_THICKNESS = 4
+local GRID_RANGE          = 1
+local UPDATE_INTERVAL     = 1
 
-local function getBaseplateYPosition(playerPosition)
-    local character = Player.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local humanoidRootPart = character.HumanoidRootPart
-        local raycastParams = RaycastParams.new()
-        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-        raycastParams.FilterDescendantsInstances = {character, baseplateFolder}
-        local raycastResult = Workspace:Raycast(humanoidRootPart.Position, Vector3.new(0, -1000, 0), raycastParams)
-        if raycastResult then
-            return raycastResult.Position.Y - (baseplateThickness / 2) - 0.05
-        else
-            return playerPosition.Y - 20
-        end
+local baseplateGrid = {}
+local lockedY       = nil
+local lastGridX     = nil
+local lastGridZ     = nil
+
+local function getInitialY(hrp)
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {Player.Character, baseplateFolder}
+    local result = Workspace:Raycast(hrp.Position, Vector3.new(0, -1000, 0), raycastParams)
+    if result then
+        return result.Position.Y - (BASEPLATE_THICKNESS / 2) - 0.1
     end
-    return 0
+    return hrp.Position.Y - 20
 end
 
-local function addBaseplate(position)
-    local key = tostring(position.X) .. "," .. tostring(position.Z)
+local function addBaseplate(gridX, gridZ)
+    local key = gridX .. "," .. gridZ
     if baseplateGrid[key] then return end
+
     local part = Instance.new("Part")
-    part.Name         = "GrassBaseplate"
-    part.Size         = Vector3.new(baseplateSize, baseplateThickness, baseplateSize)
+    part.Name         = "Baseplate"
+    part.Size         = Vector3.new(BASEPLATE_SIZE, BASEPLATE_THICKNESS, BASEPLATE_SIZE)
     part.Anchored     = true
-    part.Material     = Enum.Material.Sand
-    part.Color        = selectedColor
-    part.Position     = position
+    part.Material     = Enum.Material.SmoothPlastic
+    part.Position     = Vector3.new(gridX, lockedY, gridZ)
     part.Transparency = 1
     part.CanCollide   = true
+    part.CastShadow   = false
+    part.CanTouch     = false
+    part.CanQuery     = false
     part.Parent       = baseplateFolder
+
     baseplateGrid[key] = part
 end
 
 local function createBaseplatesAroundPlayer()
     local character = Player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    local playerPosition = character.HumanoidRootPart.Position
-    local sizeMultiplier = baseplateSize + baseplateSpacing
-    local baseplateY     = getBaseplateYPosition(playerPosition)
-    for x = -1, 1 do
-        for z = -1, 1 do
-            local gridX = math.floor(playerPosition.X / sizeMultiplier) * sizeMultiplier + (x * sizeMultiplier)
-            local gridZ = math.floor(playerPosition.Z / sizeMultiplier) * sizeMultiplier + (z * sizeMultiplier)
-            addBaseplate(Vector3.new(gridX, baseplateY, gridZ))
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if lockedY == nil then
+        lockedY = getInitialY(hrp)
+    end
+
+    local pos = hrp.Position
+    local currentGridX = math.floor(pos.X / BASEPLATE_SIZE) * BASEPLATE_SIZE
+    local currentGridZ = math.floor(pos.Z / BASEPLATE_SIZE) * BASEPLATE_SIZE
+
+    if currentGridX == lastGridX and currentGridZ == lastGridZ then return end
+    lastGridX = currentGridX
+    lastGridZ = currentGridZ
+
+    for x = -GRID_RANGE, GRID_RANGE do
+        for z = -GRID_RANGE, GRID_RANGE do
+            addBaseplate(
+                currentGridX + x * BASEPLATE_SIZE,
+                currentGridZ + z * BASEPLATE_SIZE
+            )
         end
     end
 end
 
-createBaseplatesAroundPlayer()
+local function onCharacterAdded(character)
+    character:WaitForChild("HumanoidRootPart")
+    createBaseplatesAroundPlayer()
+end
 
-spawn(function()
-    while wait(1) do
+Player.CharacterAdded:Connect(onCharacterAdded)
+if Player.Character then
+    onCharacterAdded(Player.Character)
+end
+
+local elapsed = 0
+RunService.Heartbeat:Connect(function(dt)
+    elapsed += dt
+    if elapsed >= UPDATE_INTERVAL then
+        elapsed = 0
         createBaseplatesAroundPlayer()
     end
 end)
