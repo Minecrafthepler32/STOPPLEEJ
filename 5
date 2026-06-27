@@ -31,7 +31,7 @@ local function getInitialY(hrp)
     raycastParams.FilterDescendantsInstances = {Player.Character, baseplateFolder}
     local result = Workspace:Raycast(hrp.Position, Vector3.new(0, -1000, 0), raycastParams)
     if result then
-        return result.Position.Y - (BASEPLATE_THICKNESS / 2) - 0.5
+        return result.Position.Y - (BASEPLATE_THICKNESS / 2) - 0.1
     end
     return hrp.Position.Y - 20
 end
